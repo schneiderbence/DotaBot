@@ -1,5 +1,5 @@
 const { Client, Intents } = require("discord.js");
-const token = require("./config.json");
+//const token = require("./config.json");
 const { Permissions } = require('discord.js');
 const Sequelize = require('sequelize');
 
