@@ -46,22 +46,6 @@ const player = sequelize.define('players', {
 	}
 });
 
-const server = sequelize.define('server', {
-	server_id: {
-		type: Sequelize.BIGINT,
-		unique: true,
-		allowNull: false,
-	},
-	max_player: {
-		type: Sequelize.INTEGER,
-		defaultValue: 10
-	},
-	lobbyName: {
-		type: Sequelize.STRING,
-		defaultValue: 'PLAYERS'
-	}
-});
-
 
 try 
 {
@@ -73,23 +57,7 @@ try
 
 client.once("ready", async () => {
 	player.sync();
-	server.sync();
 	console.log(client.user.username + " is ready!");
-
-	try {
-		const newSettings = await server.create({
-			server_id: 12312,
-			max_player: 10,
-			lobbyName: 'PLAYERS'
-		});
-		console.log(`Server settings are ${newSettings.server_id}, ${newSettings.max_player}, ${newSettings.lobbyName}.`);
-	}
-	catch (error) {
-		if (error.name === 'SequelizeUniqueConstraintError') {
-			message.channel.send('Player already exists.');
-		}
-		message.channel.send('Something went wrong with adding a player.');
-	}
 });
 //token.token
 
@@ -113,35 +81,27 @@ client.on("messageCreate", async (message) => {
 	const args = message.content.slice(prefix.length).trim().split(/ +/);
 	const command = args.shift().toLowerCase();
 
-	
+
+	if (command === 'ping') {
+		message.reply("Pong!");
+	}
+
+
+	if (command === 'roll') {
+        message.channel.send(message.author.toString() + ' :point_right: ' + (Math.floor(Math.random() * 100) + 1));
+    }
+
 
 	if (command === 'j') {
 		findPlayer = await player.findOne({ where: { dc_id: message.author.id } });
 		findPlayerInFirst = await player.findOne({ where: { dc_id: message.author.id, firstLobby: true } });
+		findPlayerInSecond = await player.findOne({ where: { dc_id: message.author.id, secondLobby: true } });
 		firstLobbyCount = await player.count({ where: { firstLobby: true } });
+		secondLobbyCount = await player.count({ where: { secondLobby: true } });
 		if ( findPlayerInFirst && firstLobbyCount != MAX_PLAYER ) {
 			message.channel.send({ embeds: [warningEmbed('You have already joined the lobby!')] });
 
-		} else if (firstLobbyCount == MAX_PLAYER && findPlayer) {
-			await player.update({ firstLobby: false, secondLobby: true }, {
-				where: {
-					firstLobby: true
-				}
-			});
-
-			await player.update({ firstLobby: true }, {
-				where: {
-					dc_id: message.author.id
-				}
-			});
-			console.log(`${findPlayer.username} joined.`);
-			firstLobbyCount = await player.count({ where: { firstLobby: true } });
-			findAll = await player.findAll({ where: { firstLobby: true } });
-			lobbyPlayers = [];
-			findAll.forEach(e => lobbyPlayers.push(e.nickname));
-			message.channel.send('> **PLAYERS** (' + firstLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
-
-	 	} else if (findPlayer) {
+		} else if (findPlayer && firstLobbyCount != MAX_PLAYER) {
 			await player.update({ firstLobby: true }, {
 				where: {
 					dc_id: message.author.id
@@ -153,8 +113,11 @@ client.on("messageCreate", async (message) => {
 			lobbyPlayers = [];
 			findAll.forEach(e => lobbyPlayers.push(e.nickname));
 			message.channel.send('> **PLAYERS** (' + firstLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
+			// if (firstLobbyCount == MAX_PLAYER) {
+			// 	message.channel.send('> **Game started! Good luck and have fun boys and girls!**\n' + lobbyPlayers.join(', '));
+			// }
 
-		} else {
+		} else if (firstLobbyCount != MAX_PLAYER) {
 			try {
 				const newPlayer = await player.create({
 					dc_id: message.author.id,
@@ -169,7 +132,9 @@ client.on("messageCreate", async (message) => {
 				lobbyPlayers = [];
 				findAll.forEach(e => lobbyPlayers.push(e.nickname));
 				message.channel.send('> **PLAYERS** (' + firstLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
-
+				// if (firstLobbyCount == MAX_PLAYER) {
+				// 	message.channel.send('> **Game started! Good luck and have fun boys and girls!**\n' + lobbyPlayers.join(', '));
+				// }
 			}
 			catch (error) {
 				if (error.name === 'SequelizeUniqueConstraintError') {
@@ -177,14 +142,100 @@ client.on("messageCreate", async (message) => {
 				}
 				message.channel.send('Something went wrong with adding a tag.');
 			}
+		} else if (firstLobbyCount == MAX_PLAYER && findPlayer && !findPlayerInSecond) {
+			await player.update({ firstLobby: false, secondLobby: true }, {
+				where: {
+					firstLobby: true
+				}
+			});
+			console.log(`${findPlayer.username} joined.`);
+			findAll = await player.findAll({ where: { secondLobby: true } });
+			findPlayerInSecond = await player.findOne({ where: { dc_id: message.author.id, secondLobby: true } });
+			secondLobbyCount = await player.count({ where: { secondLobby: true } });
+			lobbyPlayers = [];
+			findAll.forEach(e => lobbyPlayers.push(e.nickname));
+			message.channel.send('> **PLAYERS** (' + secondLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
+			//message.channel.send('> **Game started! Good luck and have fun boys and girls!**\n' + lobbyPlayers.join(', '));
+	 	} else if (firstLobbyCount == MAX_PLAYER && !findPlayer && !findPlayerInSecond) {
+			const newPlayer = await player.create({
+				dc_id: message.author.id,
+				username: message.author.username,
+				nickname: nameGenerator(message.author.username),
+				firstLobby: false,
+				secondLobby: true
+			});
+			console.log(`${newPlayer.username} joined.`);
+			findAll = await player.findAll({ where: { secondLobby: true } });
+			findPlayerInSecond = await player.findOne({ where: { dc_id: message.author.id, secondLobby: true } });
+			secondLobbyCount = await player.count({ where: { secondLobby: true } });
+			lobbyPlayers = [];
+			findAll.forEach(e => lobbyPlayers.push(e.nickname));
+			message.channel.send('> **PLAYERS** (' + secondLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
+		} else if (secondLobbyCount == MAX_PLAYER && firstLobbyCount == MAX_PLAYER) {
+			await player.update({ firstLobby: false, secondLobby: false }, {
+				where: {
+					[Op.or]: [
+						{ firstLobby: true },
+						{ secondLobby: true }
+					]
+				}
+			});
+			if (findPlayer) {
+				await player.update({ firstLobby: true }, {
+					where: {
+						dc_id: message.author.id
+					}
+				});
+				findAll = await player.findAll({ where: { firstLobby: true } });
+				console.log(`${findPlayer.username} joined.`);
+				lobbyPlayers = [];
+				findAll.forEach(e => lobbyPlayers.push(e.nickname));
+				message.channel.send('> **PLAYERS** (' + firstLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
+			} else {
+				const newPlayer = await player.create({
+					dc_id: message.author.id,
+					username: message.author.username,
+					nickname: nameGenerator(message.author.username),
+					firstLobby: false,
+					secondLobby: true
+				});
+				console.log(`${newPlayer.username} joined.`);
+				findAll = await player.findAll({ where: { firstLobby: true } });
+				lobbyPlayers = [];
+				findAll.forEach(e => lobbyPlayers.push(e.nickname));
+				message.channel.send('> **PLAYERS** (' + firstLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
+			}
+		} else {
+			await player.update({ firstLobby: false, secondLobby: false }, {
+				where: {
+					[Op.or]: [
+						{ firstLobby: true },
+						{ secondLobby: true }
+					]
+				}
+			});
+			if (findPlayer) {
+				await player.update({ firstLobby: true }, {
+					where: {
+						dc_id: message.author.id
+					}
+				});
+				findAll = await player.findAll({ where: { firstLobby: true } });
+				console.log(`${findPlayer.username} joined.`);
+				lobbyPlayers = [];
+				findAll.forEach(e => lobbyPlayers.push(e.nickname));
+				message.channel.send('> **PLAYERS** (' + firstLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
+			}
 		}
 	}
 
 
 	if (command === 'l') {
 		findPlayerInFirst = await player.findOne({ where: { dc_id: message.author.id, firstLobby: true } });
+		findPlayerInSecond = await player.findOne({ where: { dc_id: message.author.id, secondLobby: true } });
 		firstLobbyCount = await player.count({ where: { firstLobby: true } });
-			if (findPlayerInFirst) {
+		secondLobbyCount = await player.count({ where: { secondLobby: true } });
+			if (findPlayerInFirst && !findPlayerInSecond) {
 				await player.update({ firstLobby: false }, {
 					where: {
 						dc_id: message.author.id
@@ -196,18 +247,38 @@ client.on("messageCreate", async (message) => {
 				lobbyPlayers = [];
 				findAll.forEach(e => lobbyPlayers.push(e.nickname));
 				message.channel.send('> **PLAYERS** (' + firstLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
+			} else if (findPlayerInFirst && findPlayerInSecond) {
+				await player.update({ firstLobby: false, secondLobby: false }, {
+					where: {
+						dc_id: message.author.id
+					}
+				});
+				secondLobbyCount = await player.count({ where: { secondLobby: true } });
+				findAll = await player.findAll({ where: { secondLobby: true } });
+				console.log(message.author.username + ' left the lobby.');
+				lobbyPlayers = [];
+				findAll.forEach(e => lobbyPlayers.push(e.nickname));
+				message.channel.send('> **PLAYERS** (' + secondLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
 			} else {
 				message.channel.send({ embeds: [warningEmbed('You are not in the lobby!')] });
 			}
 	}
 
-
+	
 	if (command === 'who') {
 		lobbyPlayers = [];
-		findAll = await player.findAll({ where: { firstLobby: true } });
-		firstLobbyCount = await player.count({ where: { firstLobby: true } });
-		findAll.forEach(e => lobbyPlayers.push(e.nickname));
-		message.channel.send('> **PLAYERS** (' + firstLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
+		if (firstLobbyCount != MAX_PLAYER) {
+			findAll = await player.findAll({ where: { firstLobby: true } });
+			firstLobbyCount = await player.count({ where: { firstLobby: true } });
+			findAll.forEach(e => lobbyPlayers.push(e.nickname));
+			message.channel.send('> **PLAYERS** (' + firstLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
+		} else {
+			findAll = await player.findAll({ where: { secondLobby: true } });
+			secondLobbyCount = await player.count({ where: { secondLobby: true } });
+			findAll.forEach(e => lobbyPlayers.push(e.nickname));
+			message.channel.send('> **PLAYERS** (' + secondLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
+		}
+		
 	}
 
 
@@ -240,6 +311,7 @@ client.on("messageCreate", async (message) => {
 				lobbyPlayers = [];
 				findAll.forEach(e => lobbyPlayers.push(e.nickname));
 				message.channel.send('> **PLAYERS** (' + firstLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
+				//message.channel.send('> **Game started! Good luck and have fun boys and girls!**\n' + lobbyPlayers.join(', '));
 
 			} else if (findPlayer) {
 				await player.update({ firstLobby: true }, {
@@ -253,7 +325,9 @@ client.on("messageCreate", async (message) => {
 				lobbyPlayers = [];
 				findAll.forEach(e => lobbyPlayers.push(e.nickname));
 				message.channel.send('> **PLAYERS** (' + firstLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
-
+				// if (firstLobbyCount == MAX_PLAYER) {
+				// 	message.channel.send('> **Game started! Good luck and have fun boys and girls!**\n' + lobbyPlayers.join(', '));
+				// }
 			} else {
 				try {
 					const newPlayer = await player.create({
@@ -269,7 +343,9 @@ client.on("messageCreate", async (message) => {
 					lobbyPlayers = [];
 					findAll.forEach(e => lobbyPlayers.push(e.nickname));
 					message.channel.send('> **PLAYERS** (' + firstLobbyCount  + '/' + MAX_PLAYER + ')' + ' **|** ' + lobbyPlayers.join('/'));
-
+					// if (firstLobbyCount == MAX_PLAYER) {
+					// 	message.channel.send('> **Game started! Good luck and have fun boys and girls!**\n' + lobbyPlayers.join(', '));
+					// }
 				}
 				catch (error) {
 					if (error.name === 'SequelizeUniqueConstraintError') {
