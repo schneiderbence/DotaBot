@@ -47,8 +47,7 @@ const player = sequelize.define('players', {
 });
 
 
-try 
-{
+try {
 	sequelize.authenticate();
 	console.log('Connection has been established successfully.');
 } catch (error) {
