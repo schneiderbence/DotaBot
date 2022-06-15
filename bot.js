@@ -4,6 +4,7 @@ const { Permissions } = require('discord.js');
 const Sequelize = require('sequelize');
 const { Op } = require("sequelize");
 const { MessageEmbed } = require('discord.js');
+const commandSend = require('./commands.js');
 
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MEMBERS, Intents.FLAGS.DIRECT_MESSAGES] });
@@ -16,7 +17,7 @@ var firstLobbyCount;
 var firstLobbyCount;
 var findAll;
 var embed;
-const CHANNEL_ID = process.env.CHANNEL;
+const CHANNEL_ID = process.env.channel;
 
 const sequelize = new Sequelize({
 	dialect: 'sqlite',
@@ -90,6 +91,11 @@ client.on("messageCreate", async (message) => {
 
 		if (command === 'roll') {
 			message.channel.send(message.author.toString() + ' :point_right: ' + (Math.floor(Math.random() * 100) + 1));
+		}
+
+		
+		if (command === "commands") {
+			message.author.send({embeds: [commandSend.commandEmbed()]});
 		}
 
 
