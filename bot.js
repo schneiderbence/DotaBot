@@ -17,7 +17,7 @@ var firstLobbyCount;
 var firstLobbyCount;
 var findAll;
 var embed;
-const CHANNEL_ID = process.env.channel;
+const CHANNEL_ID = process.env.CHANNEL;
 
 const sequelize = new Sequelize({
 	dialect: 'sqlite',
