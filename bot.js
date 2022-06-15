@@ -78,7 +78,7 @@ function warningEmbed(text) {
 
 
 client.on("messageCreate", async (message) => {
-	if (message.channel.id = CHANNEL_ID) {
+	if (message.channel.id == CHANNEL_ID) {
 		if (!message.content.startsWith(prefix) || message.author.bot) return;
 		const args = message.content.slice(prefix.length).trim().split(/ +/);
 		const command = args.shift().toLowerCase();
@@ -93,7 +93,7 @@ client.on("messageCreate", async (message) => {
 			message.channel.send(message.author.toString() + ' :point_right: ' + (Math.floor(Math.random() * 100) + 1));
 		}
 
-		
+
 		if (command === "commands") {
 			message.author.send({embeds: [commandSend.commandEmbed()]});
 		}
