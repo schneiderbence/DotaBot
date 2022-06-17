@@ -19,12 +19,12 @@ function commandEmbed() {
             value: "Use this command to add a player to the lobby."
         },
         {
-            name: "=remove @player",
+            name: "=remove @playername",
             value: "Use this command to remove a player from the lobby."
         },
         {
             name: "=reset",
-            value: "Use this command to reset the lobby. (Batcher and Council members can use it.)"
+            value: "Use this command to reset the lobby."
         },
         {
             name: "=roll",

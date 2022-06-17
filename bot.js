@@ -57,7 +57,7 @@ try {
 }
 
 client.once("ready", async () => {
-	player.sync();
+	player.sync({ alter: true });
 	console.log(client.user.username + " is ready!");
 });
 //token.token
@@ -77,16 +77,18 @@ function warningEmbed(text) {
 }
 
 
+client.on('message', message => {
+    if (message.content === 'ping') {
+		message.reply('Pong!');
+    }
+  });
+
+
 client.on("messageCreate", async (message) => {
 	if (message.channel.id == CHANNEL_ID) {
 		if (!message.content.startsWith(prefix) || message.author.bot) return;
 		const args = message.content.slice(prefix.length).trim().split(/ +/);
 		const command = args.shift().toLowerCase();
-
-
-		if (command === 'ping') {
-			message.reply("Pong!");
-		}
 
 
 		if (command === 'roll') {
