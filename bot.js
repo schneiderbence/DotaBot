@@ -18,11 +18,10 @@ var firstLobbyCount;
 var findAll;
 var embed;
 const CHANNEL_ID = process.env.CHANNEL;
-
-const sequelize = new Sequelize({
-	dialect: 'sqlite',
-	logging: false,
-	storage: 'database.sqlite',
+//process.env.CHANNEL
+const sequelize = new Sequelize(process.env.DATABASE_NAME, process.env.USERNAME, process.env.PASSWORD, {
+	dialect: 'mysql',
+	host: process.env.HOST
 });
 
 
@@ -57,10 +56,11 @@ try {
 }
 
 client.once("ready", async () => {
-	player.sync({ alter: true });
+	player.sync();
 	console.log(client.user.username + " is ready!");
 });
 //token.token
+//process.env.TOKEN
 
 client.login(process.env.TOKEN);
 
